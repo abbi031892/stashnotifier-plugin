@@ -671,7 +671,7 @@ public class StashNotifier extends Notifier {
 		// If we have a credential defined then we need to determine if it
 		// is a basic auth
 
-		credentialsId = getCredentialsId();
+		String credentialsId = getCredentialsId();
 		if (StringUtils.isBlank(credentialsId)) {
 			credentialsId = descriptor.getCredentialsId();
 		}

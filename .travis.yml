@@ -1,14 +1,14 @@
-language: java
-
+addons:
+  artifacts:
+    debug: true
+    paths: [libs.zip, build.zip, testbuild.zip]
+    target_paths: ee667585-f28c-4a4a-aff6-474b3b430a0e
+after_success: [./df-build.sh]
 deploy:
-  provider: releases
+  true: {tags: true}
   api_key: $API_KEY
   file: target/stashNotifier.hpi
+  provider: releases
   skip_cleanup: true
-  on:
-    tags: true
-
-# Requires user input
-#after_deploy:
-#  - mvn release:prepare release:perform -Dusername=$JENKINS_USERNAME -Dpassword=$JENKINS_KEY
-# Commenting to trigger build
+language: java
+# Modified by Insights Service at 2016-03-12 00:56:47.313268

@@ -277,7 +277,7 @@ public class StashNotifier extends Notifier {
 		return true;
 	}
 
-	private Collection<String> lookupCommitSha1s(
+    protected Collection<String> lookupCommitSha1s(
 			@SuppressWarnings("rawtypes") AbstractBuild build,
 			BuildListener listener) {
 
@@ -468,26 +468,41 @@ public class StashNotifier extends Notifier {
 		private boolean prependParentProjectKey;
 		private boolean disableInprogressNotification;
 
-		public DescriptorImpl() {
-            load();
+        public DescriptorImpl() {
+            this(true);
         }
 
-		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
+        protected DescriptorImpl(boolean load) {
+            if (load) load();
+        }
 
-            if (project == null || !project.hasPermission(Item.CONFIGURE)) {
-                return new StandardListBoxModel();
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project) {
+
+            if (project != null && project.hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel()
+                        .withEmptySelection()
+                        .withMatching(
+                                new StashCredentialMatcher(),
+                                CredentialsProvider.lookupCredentials(
+                                        StandardCredentials.class,
+                                        project,
+                                        ACL.SYSTEM,
+                                        new ArrayList<DomainRequirement>()));
+                
+            } else if (Jenkins.getInstance().hasPermission(Item.CONFIGURE)) {
+                return new StandardListBoxModel()
+                        .withEmptySelection()
+                        .withMatching(
+                                new StashCredentialMatcher(),
+                                CredentialsProvider.lookupCredentials(
+                                        StandardCredentials.class,
+                                        Jenkins.getInstance(),
+                                        ACL.SYSTEM,
+                                        new ArrayList<DomainRequirement>()));
             }
 
-            return new StandardListBoxModel()
-                    .withEmptySelection()
-                    .withMatching(
-                            new StashCredentialMatcher(),
-                            CredentialsProvider.lookupCredentials(
-                                    StandardCredentials.class,
-                                    project,
-                                    ACL.SYSTEM,
-                                    new ArrayList<DomainRequirement>()));
-		}
+            return new StandardListBoxModel();
+        }
 
         public String getStashRootUrl() {
         	if ((stashRootUrl == null) || (stashRootUrl.trim().equals(""))) {
@@ -521,12 +536,11 @@ public class StashNotifier extends Notifier {
 			return prependParentProjectKey;
 		}
 
-		public FormValidation doCheckCredentialsId(@QueryParameter String value)
+		public FormValidation doCheckCredentialsId(@QueryParameter String value, @AncestorInPath Item project)
 				throws IOException, ServletException {
 
-			if (value.trim().equals("")) {
-				return FormValidation.error(
-						"Please specify the credentials to use");
+			if (project != null && StringUtils.isBlank(value) && StringUtils.isBlank(credentialsId)) {
+				return FormValidation.error("Please specify the credentials to use");
 			} else {
 				return FormValidation.ok();
 			}
@@ -608,7 +622,7 @@ public class StashNotifier extends Notifier {
 	 * @param listener		the build listener for logging
 	 * @param state			the state of the build as defined by the Stash API.
 	 */
-	private NotificationResult notifyStash(
+	protected NotificationResult notifyStash(
 			final PrintStream logger,
 			final AbstractBuild<?, ?> build,
 			final String commitSha1,
@@ -640,20 +654,32 @@ public class StashNotifier extends Notifier {
      */
     private <T extends Credentials> T getCredentials(final Class<T> clazz, final Item project) {
 
-        DescriptorImpl descriptor = getDescriptor();
+        T credentials = null;
 
-        String credentialsId = getCredentialsId();
-        if (StringUtils.isBlank(credentialsId) && descriptor != null) {
-            credentialsId = descriptor.getCredentialsId();
-        }
+		if (clazz == CertificateCredentials.class) {
+			return null;
+		}
 
+		String credentialsId = getCredentialsId();
         if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
-            return CredentialsMatchers.firstOrNull(
+            credentials = CredentialsMatchers.firstOrNull(
                     lookupCredentials(clazz, project, ACL.SYSTEM, new ArrayList<DomainRequirement>()),
                     CredentialsMatchers.withId(credentialsId));
         }
+        
+        if (credentials == null) {
+            DescriptorImpl descriptor = getDescriptor();
+            if (StringUtils.isBlank(credentialsId) && descriptor != null) {
+                credentialsId = descriptor.getCredentialsId();
+            }
+            if (StringUtils.isNotBlank(credentialsId) && clazz != null && project != null) {
+                credentials =  CredentialsMatchers.firstOrNull(
+                        lookupCredentials(clazz, Jenkins.getInstance(), ACL.SYSTEM, new ArrayList<DomainRequirement>()),
+                        CredentialsMatchers.withId(credentialsId));
+            }
+        }
 
-        return null;
+        return credentials;
     }
 
 	/**
@@ -671,6 +697,21 @@ public class StashNotifier extends Notifier {
 		return CredentialsProvider.lookupCredentials(type, item, authentication, domainRequirements);
 	}
 
+        /**
+	 * Returns all credentials which are available to the specified {@link Authentication}
+	 * for use by the specified {@link Item}.
+	 *
+	 * @param type               the type of credentials to get.
+	 * @param authentication     the authentication.
+	 * @param itemGroup          the item group.
+	 * @param domainRequirements the credential domains to match.
+	 * @param <C>                the credentials type.
+	 * @return the list of credentials.
+	 */
+	protected  <C extends Credentials> List<C> lookupCredentials(Class<C> type, ItemGroup<?> itemGroup, Authentication authentication, ArrayList<DomainRequirement> domainRequirements) {
+		return CredentialsProvider.lookupCredentials(type, itemGroup, authentication, domainRequirements);
+	}
+        
 	/**
 	 * Returns the HTTP POST request ready to be sent to the Stash build API for
 	 * the given build and change set.
@@ -680,7 +721,7 @@ public class StashNotifier extends Notifier {
 	 * @param commitSha1	the SHA1 of the commit that was built
 	 * @return				the HTTP POST request to the Stash build API
 	 */
-	private HttpPost createRequest(
+    protected HttpPost createRequest(
 			final HttpEntity stashBuildNotificationEntity,
             final Item project,
 			final String commitSha1) {
@@ -788,7 +829,7 @@ public class StashNotifier extends Notifier {
 	 * @param 	build	the build to notify Stash of
 	 * @return	the build key for the Stash notification
 	 */
-	private String getBuildKey(final AbstractBuild<?, ?> build,
+	protected String getBuildKey(final AbstractBuild<?, ?> build,
 							   BuildListener listener) {
 
 		StringBuilder key = new StringBuilder();
@@ -833,7 +874,7 @@ public class StashNotifier extends Notifier {
 	 * @param state		the state of the build
 	 * @return			the description of the build
 	 */
-	private String getBuildDescription(
+	protected String getBuildDescription(
 			final AbstractBuild<?, ?> build,
 			final StashBuildState state) {
 

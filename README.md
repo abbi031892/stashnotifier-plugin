@@ -1,27 +1,32 @@
-# Bitbucket Notify Plugin for Jenkins
+Stash Build Notifier Plugin for Jenkins
+=======================================
 
-This Jenkins plugin notifies Bitbucket (Cloud or Server, also known as Stash before) with build result status. 
-Failed or successful builds will show up as little icons in the Bitbucket web interface in commit logs. 
-Clicking on such an icon will take the user to the specific build.
+This Jenkins plugin notifies Stash of build results. Failed or
+successful builds will show up as little icons in the Stash web 
+interface in commit logs. Clicking on such an icon will take the 
+user to the specific build.
 
-## Requirements
+Requirements
+============
 
-Compatible bitbucket server:
-* **[Stash Server][] 2.1** or newer.
-* **[Bitbucket Server][] 4.0** or newer. 
-* **[Bitbucket Cloud][]**
+* **[Stash][] 2.1** or newer. This plugin uses the Atlassian 
+[Stash Build REST API][] which was introduced with Stash 2.1. 
+* **Jenkins 1.498** or newer
 
-Jenkins instance:
-* **Jenkins 1.502** or newer
+Usage
+=====
 
-Jenkins plugins:
-* **[TokenMacro Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Token+Macro+Plugin) ~1.11**
-* **[Credentials Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin) ~1.22**
+Use the Stash Notifier by adding it as a _Post Step_ in your Jenkins build job 
+configuration. 
 
-## Usage
-
-1. Configure Stash\Bitbucket Server\Bitbucket Cloud instances on Jenkins Global Configuration page
-2. Configure 
+1. In your Jenkins job configuration go to the *Post-build Actions* section, 
+click on *Add post-build action* and select *Notify Stash Instance*
+2. Enter the Stash base URL, e. g. <tt>http://localhost:7990</tt> or 
+<tt>http://my.company/stash</tt>. If in doubt, go to your local Stash 
+server and check the URL in the browser. The URL 
+<tt>http://georg@localhost:7991/projects</tt> e. g. reveals the
+server base URL, which is <tt>http://localhost:7991</tt> in this case. 
+2. Use the [Credentials Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin) to select credentials for stash
 
 That's it. If you have configured everything correctly, Jenkins will notify
 your Stash instance of subsequent builds. The result is illustrated on
@@ -31,18 +36,15 @@ Atlassians [Stash Build Integration][] wiki page.
 
 Currently Stash Build Notifier Plugin accepts only raw plaintext credentials as it work over HTTP REST API of stash
 
-## Under the hood
 
-### For hosted Bitbucket\Stash installation 
-This plugin uses the Atlassian [Stash Build REST API][] which was introduced with Stash 2.1.
+Maintainers
+===========
 
-### For Bitbucket cloud
-
-## Maintainers
-
+* Georg Gruetter ([Twitter](https://twitter.com/bumbleGee), [GitHub](https://github.com/gruetter))
 * Pavel Batanov ([GitHub](https://github.com/scaytrase))
 
-## License
+License
+=======
 
 [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html)
 

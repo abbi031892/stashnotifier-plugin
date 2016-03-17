@@ -10,5 +10,6 @@ deploy:
   file: target/stashNotifier.hpi
   provider: releases
   skip_cleanup: true
-language: java
+  on:
+    tags: true
 # Modified by Insights Service at 2016-03-14 20:01:50.280708
